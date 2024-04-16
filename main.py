@@ -34,15 +34,13 @@ totoFalling = tk.PhotoImage(file="assets/sprites_64/totoFalling.png")
 
 bird = canvas.create_image(
     50, HEIGHT / 2, image=totoUp, anchor="nw"
-)  # image = starting image
+)  # image = starting sprite
 
 
 def jump():
     global bird_y_velocity
     bird_y_velocity = -JUMP_STRENGTH  # Negative for upward jump
 
-
-root.bind("<space>", lambda event: jump())
 
 bird_y_velocity = 0
 
@@ -107,6 +105,7 @@ def update_score():
     global score
     score += 1
     canvas.itemconfig(score_display, text="Score: " + str(score))
+    canvas.tag_raise(score_display)
 
 
 # endregion
@@ -141,7 +140,6 @@ def check_collision():
 
         # bird_coords[0] is left, bird_coords[1] is top, bird_coords[2] is right, bird_coords[3] is bottom
         # coords[0] is left, coords[1] is top, coords[2] is right, coords[3] is bottom
-        # 0, 0 is top left corner
         if (
             bird_coords[2]
             > top_coords[
@@ -160,8 +158,6 @@ def check_collision():
                 3
             ]  # if the top of the bird is above the bottom of the top pipe
         ):
-            # print(top_coords, bottom_coords)
-            # print("Collision with top pipe")
             game_over()
 
         # Check for collision with bottom pipe
@@ -171,8 +167,6 @@ def check_collision():
             and bird_coords[1] < bottom_coords[3]
             and bird_coords[3] > bottom_coords[1]
         ):
-            # print(top_coords, bottom_coords)
-            # print("Collision with bottom pipe")
             game_over()
 
         if (
@@ -186,32 +180,45 @@ def check_collision():
 
 
 def game_over_animation():
+    root.unbind("<space>")
     global bird_y_velocity
     if canvas.coords(bird)[1] < HEIGHT + bird_size:
         bird_y_velocity += GRAVITY
         canvas.move(bird, 0, bird_y_velocity)
         if show_hitbox:
             canvas.move(bird_hitbox, 0, bird_y_velocity)
-        root.after(GAME_REFRESH_RATE, game_over_animation)  # Adjust '20' for game speed
+        root.after(GAME_REFRESH_RATE, game_over_animation)
 
 
-def game_loop():
+def game_loop(first_run=False, start_message=None):
     if not game_running:
         game_over_animation()
         return
+    elif first_run:
+        jump()
+        root.bind("<space>", lambda event: jump())
+        canvas.delete(start_message)
     update_bird()
-    move_pipes()
-    check_collision()
 
     # Create new pipes periodically
     if len(pipes) == 0 or canvas.coords(pipes[-1]["top"])[2] < WIDTH - 300:
         create_pipes()
 
-    root.after(GAME_REFRESH_RATE, game_loop)  # Adjust '20' for game speed
+    move_pipes()
+    check_collision()
+
+    root.after(GAME_REFRESH_RATE, game_loop)
+
+
+def start_screen():
+    start_message = canvas.create_text(
+        WIDTH / 2, HEIGHT / 2, text="Press Space to Start", font=("Arial", 24)
+    )
+    root.bind(
+        "<space>", lambda event: game_loop(first_run=True, start_message=start_message)
+    )
 
 
 # endregion
-
-# Call functions to start the game
-game_loop()
+start_screen()
 root.mainloop()  # Start main loop

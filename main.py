@@ -5,6 +5,9 @@ import random
 WIDTH = 500
 HEIGHT = 400
 PIPE_GAP = 150
+GAME_REFRESH_RATE = 20  # 20ms is the default
+GRAVITY = 0.25  # 0.2 is the default
+JUMP_STRENGTH = 6  # 5 is the default
 
 # Create main window and canvas
 root = tk.Tk()
@@ -12,28 +15,51 @@ root.title("Floppy Totoro")
 canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="skyblue")
 canvas.pack()
 
-# Bird Logic
-bird_size = 20
-bird = canvas.create_rectangle(
-    50, HEIGHT / 2, 50 + bird_size, HEIGHT / 2 + bird_size, fill="yellow"
-)
+# DEBUG Options
+show_hitbox = False
+show_debug = False
+if show_debug:
+    debug_info = canvas.create_text(WIDTH / 2, 40, text="", font=("Arial", 16))
 
-gravity = 0.2
-bird_y_velocity = 0
+# Bird Logic
+bird_size = 64
+if show_hitbox:
+    bird_hitbox = canvas.create_rectangle(
+        50, HEIGHT / 2, 50 + bird_size, HEIGHT / 2 + bird_size, fill="yellow"
+    )
+
+totoUp = tk.PhotoImage(file="assets/sprites_64/totoUp.png")
+totoDown = tk.PhotoImage(file="assets/sprites_64/totoDown.png")
+totoFalling = tk.PhotoImage(file="assets/sprites_64/totoFalling.png")
+
+bird = canvas.create_image(
+    50, HEIGHT / 2, image=totoUp, anchor="nw"
+)  # image = starting image
 
 
 def jump():
     global bird_y_velocity
-    bird_y_velocity = -8  # Negative for upward jump
+    bird_y_velocity = -JUMP_STRENGTH  # Negative for upward jump
 
 
 root.bind("<space>", lambda event: jump())
 
+bird_y_velocity = 0
+
 
 def update_bird():
     global bird_y_velocity
-    bird_y_velocity += gravity
+    bird_y_velocity += GRAVITY
     canvas.move(bird, 0, bird_y_velocity)
+    if bird_y_velocity < 0:
+        canvas.itemconfig(bird, image=totoUp)
+    else:
+        canvas.itemconfig(bird, image=totoDown)
+
+    if show_debug:
+        canvas.itemconfig(debug_info, text="Bird Y Velocity: " + str(bird_y_velocity))
+    if show_hitbox:
+        canvas.move(bird_hitbox, 0, bird_y_velocity)
 
 
 # region Pipes
@@ -92,12 +118,22 @@ game_running = True
 def game_over():
     global game_running
     game_running = False
+    canvas.itemconfig(bird, image=totoFalling)
+    canvas.move(bird, 0, 5)
     canvas.create_text(WIDTH / 2, HEIGHT / 2, text="Game Over", font=("Arial", 24))
-    # root.quit()
 
 
 def check_collision():
+    global bird_size
     bird_coords = canvas.coords(bird)
+    if len(bird_coords) == 2:
+        bird_coords = [
+            bird_coords[0],
+            bird_coords[1],
+            bird_coords[0] + bird_size,
+            bird_coords[1] + bird_size,
+        ]
+
     for pipe in pipes:
         top_coords = canvas.coords(pipe["top"])
         bottom_coords = canvas.coords(pipe["bottom"])
@@ -124,8 +160,8 @@ def check_collision():
                 3
             ]  # if the top of the bird is above the bottom of the top pipe
         ):
-            print(top_coords, bottom_coords)
-            print("Collision with top pipe")
+            # print(top_coords, bottom_coords)
+            # print("Collision with top pipe")
             game_over()
 
         # Check for collision with bottom pipe
@@ -135,8 +171,8 @@ def check_collision():
             and bird_coords[1] < bottom_coords[3]
             and bird_coords[3] > bottom_coords[1]
         ):
-            print(top_coords, bottom_coords)
-            print("Collision with bottom pipe")
+            # print(top_coords, bottom_coords)
+            # print("Collision with bottom pipe")
             game_over()
 
         # Check for passing the pipe
@@ -144,8 +180,19 @@ def check_collision():
             update_score()
 
 
+def game_over_animation():
+    global bird_y_velocity
+    if canvas.coords(bird)[1] < HEIGHT + bird_size:
+        bird_y_velocity += GRAVITY
+        canvas.move(bird, 0, bird_y_velocity)
+        if show_hitbox:
+            canvas.move(bird_hitbox, 0, bird_y_velocity)
+        root.after(GAME_REFRESH_RATE, game_over_animation)  # Adjust '20' for game speed
+
+
 def game_loop():
     if not game_running:
+        game_over_animation()
         return
     update_bird()
     move_pipes()
@@ -155,7 +202,7 @@ def game_loop():
     if len(pipes) == 0 or canvas.coords(pipes[-1]["top"])[2] < WIDTH - 300:
         create_pipes()
 
-    root.after(20, game_loop)  # Adjust '20' for game speed
+    root.after(GAME_REFRESH_RATE, game_loop)  # Adjust '20' for game speed
 
 
 # endregion

@@ -175,6 +175,11 @@ def check_collision():
             # print("Collision with bottom pipe")
             game_over()
 
+        if (
+            bird_coords[3] > HEIGHT or bird_coords[1] < 0
+        ):  # Check for collision with top or bottom of the screen
+            game_over()
+
         # Check for passing the pipe
         if bird_coords[0] > top_coords[2]:
             update_score()

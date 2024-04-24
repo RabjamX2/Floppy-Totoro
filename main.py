@@ -16,8 +16,8 @@ canvas = tk.Canvas(root, width=WIDTH, height=HEIGHT, bg="skyblue")
 canvas.pack()
 
 # DEBUG Options
-show_hitbox = False
-show_debug = False
+show_hitbox = True
+show_debug = True
 if show_debug:
     debug_info = canvas.create_text(WIDTH / 2, 40, text="", font=("Arial", 16))
 
